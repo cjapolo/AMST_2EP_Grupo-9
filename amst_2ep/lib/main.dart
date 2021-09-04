@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +11,8 @@ import 'tema.dart';
 void main() {
   runApp(MyApp());
 }
+
+late Future<Profile> futureProfile = fetchProfile();
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
@@ -23,7 +27,7 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         routes: <String, WidgetBuilder>{
           '/songs': (BuildContext context) => new SongList(),
-          '/profile': (BuildContext context) => new UserProfile(),
+          '/profile': (BuildContext context) => new UserProfile(key, futureProfile),
         },
       );
     } else {
@@ -34,7 +38,7 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         routes: <String, WidgetBuilder>{
           '/songs': (BuildContext context) => new SongList(),
-          '/profile': (BuildContext context) => new UserProfile(),
+          '/profile': (BuildContext context) => new UserProfile(key, futureProfile),
         },
       );
     }
@@ -198,7 +202,7 @@ class SongList extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const UserProfile()),
+                MaterialPageRoute(builder: (context) => new  UserProfile(key, futureProfile)),
               );
             },
             icon: const Icon(Icons.account_circle_outlined),
@@ -209,21 +213,130 @@ class SongList extends StatelessWidget {
   }
 }
 
+Future<Profile> fetchProfile() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? token = prefs.getString('access_token');
+
+  final response = await http
+      .get(Uri.parse('https://api.spotify.com/v1/me'),
+      headers: {'Authorization' : "Bearer " + token!,
+                'Accept' : "application/json"});
+
+  print(response.statusCode);
+
+  if (response.statusCode == 200) {
+    // If the server did return a 200 OK response,
+    // then parse the JSON.
+    return Profile.fromJson(jsonDecode(response.body));
+  } else {
+    // If the server did not return a 200 OK response,
+    // then throw an exception.
+    // throw Exception('Failed to load profile');
+    return new Profile(display_name: "display_name", folowers_total: 20, image_url: "https://source.unsplash.com/random/250x250");
+  }
+}
+
+class Profile {
+  final String display_name;
+  final int folowers_total;
+  final String image_url;
+
+  Profile({
+    required this.display_name,
+    required this.folowers_total,
+    required this.image_url,
+  });
+
+  factory Profile.fromJson(Map<String, dynamic> json) {
+    return Profile(
+      display_name: json['display_name'],
+      folowers_total: json['followers']['total'],
+      image_url: json['images'][0]['url'],
+    );
+  }
+}
+
 class UserProfile extends StatelessWidget {
-  const UserProfile({Key? key}) : super(key: key);
+
+  late Future<Profile> profile;
+
+  UserProfile(Key? key, Future<Profile> profile){
+    this.profile = profile;
+  }
 
   static const _actionTitles = ['LogOut', 'Canciones', 'Detalles Usuario'];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        itemCount: 25,
-        itemBuilder: (context, index) {
-          return FakeItem(isBig: index.isOdd);
-        },
-      ),
+        body:
+        new Center(
+          child:
+          new Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children:
+              <Widget>[
+                FutureBuilder<Profile>(
+                  future: profile,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      return new Image.network(
+                        snapshot.data!.image_url,
+                        fit:BoxFit.fill,
+                        width: 150.0,
+                        height: 150.0,
+                      );
+                    } else if (snapshot.hasError) {
+                      return Text('${snapshot.error}');
+                    }
+
+                    // By default, show a loading spinner.
+                    return const CircularProgressIndicator();
+                  },
+                ),
+                FutureBuilder<Profile>(
+                  future: profile,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      return new Text(
+                        snapshot.data!.display_name,
+                        style: new TextStyle(fontSize:42.0,
+                            color: const Color(0xFF000000),
+                            fontWeight: FontWeight.w300,
+                            fontFamily: "Roboto"),
+                      );
+                    } else if (snapshot.hasError) {
+                      return Text('${snapshot.error}');
+                    }
+
+                    // By default, show a loading spinner.
+                    return const Text('Algo salió mal');
+                  },
+                ),
+                FutureBuilder<Profile>(
+                  future: profile,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      return new Text(
+                        (snapshot.data!.folowers_total).toString(),
+                        style: new TextStyle(fontSize:29.0,
+                            color: const Color(0xFF000000),
+                            fontWeight: FontWeight.w200,
+                            fontFamily: "Roboto"),
+                      );
+                    } else if (snapshot.hasError) {
+                      return Text('${snapshot.error}');
+                    }
+
+                    // By default, show a loading spinner.
+                    return const Text('Algo salió mal');
+                  },
+                )
+              ]
+          ),
+        ),
       floatingActionButton: ExpandableFab(
         distance: 112.0,
         children: [
