@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'authorizationModel.dart';
 import 'authorizationBloc.dart';
 import 'menu.dart';
 import 'tema.dart';
@@ -22,6 +21,10 @@ class MyApp extends StatelessWidget {
         theme: tema,
         home: LoginSpotify(),
         debugShowCheckedModeBanner: false,
+        routes: <String, WidgetBuilder>{
+          '/songs': (BuildContext context) => new SongList(),
+          '/profile': (BuildContext context) => new UserProfile(),
+        },
       );
     } else {
       return MaterialApp(
@@ -29,6 +32,10 @@ class MyApp extends StatelessWidget {
         theme: tema,
         home: SongList(),
         debugShowCheckedModeBanner: false,
+        routes: <String, WidgetBuilder>{
+          '/songs': (BuildContext context) => new SongList(),
+          '/profile': (BuildContext context) => new UserProfile(),
+        },
       );
     }
   }
@@ -56,7 +63,7 @@ class _AsynWait extends State<AsynWait> {
     _bienvenido() {
       authorizationBloc.disposeToken();
       Timer(Duration(microseconds: 0),
-              () => Navigator.pushNamedAndRemoveUntil(context,"/home", (route)=>false));
+              () => Navigator.pushNamedAndRemoveUntil(context,"/songs", (route)=>false));
       return Center(child: CircularProgressIndicator());
     }
 
@@ -73,12 +80,12 @@ class _AsynWait extends State<AsynWait> {
                 stream: authorizationBloc.authorizationToken,
                 builder: (context, AsyncSnapshot<dynamic> snapshot) {
                   if (snapshot.hasData) {
-                    // print("FINAL DATA");
-                    // print('access_token: ${snapshot.data.accessToken}');
-                    // print("token_type: ${snapshot.data.tokenType}");
-                    // print("expires_in: ${snapshot.data.expiresIn}");
-                    // print("refresh_token: ${snapshot.data.refreshToken}");
-                    // print("scope: ${snapshot.data.scope}");
+                    print("FINAL DATA");
+                    print('access_token: ${snapshot.data.accessToken}');
+                    print("token_type: ${snapshot.data.tokenType}");
+                    print("expires_in: ${snapshot.data.expiresIn}");
+                    print("refresh_token: ${snapshot.data.refreshToken}");
+                    print("scope: ${snapshot.data.scope}");
                     addTokenToSF(snapshot);
                     return _bienvenido();
                   } else if (snapshot.hasError) {
@@ -106,7 +113,7 @@ class LoginSpotify extends StatelessWidget {
   {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const SongList()),
+      MaterialPageRoute(builder: (context) => AsynWait()),
     );
   }
 
@@ -138,12 +145,8 @@ class LoginSpotify extends StatelessWidget {
             new Container(
               margin: const EdgeInsets.only(top: 10.0),
               child: new ElevatedButton(
-                key:null, onPressed: (){
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SongList()),
-                  );
-                },
+                key:null,
+                onPressed: () { _getToken(context); },
                 child: new Text(
                   "Iniciar Sesión",
                   style: new TextStyle(fontSize:22.0,

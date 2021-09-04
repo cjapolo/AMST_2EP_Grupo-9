@@ -6,14 +6,12 @@ class AuthorizationApiProvider {
   Client client = Client();
 
   static String url = "https://accounts.spotify.com/authorize";
-  // TODO: Proper Scheme
-  static String client_id = "YOURCLIENTIDHERE";
+  static String client_id = "c5b5c396081b492a833f21df57698400";
   static String response_type = "code";
-  // TODO: Proper Scheme
-  static String redirect_uri = "NAME:/";
+  static String redirect_uri = "cbname:/";
   static String scope =
       "playlist-read-private playlist-read-collaborative";
-  static String state = "34fFs29kd09";
+  static String state = "34fFs2thd09";
 
   String urlDireccion = "$url" +
       "?client_id=$client_id" +
@@ -24,8 +22,7 @@ class AuthorizationApiProvider {
 
   Future<String?> fetchCode() async {
     final response = await FlutterWebAuth.authenticate(
-        // TODO: Proper Scheme
-        url: urlDireccion, callbackUrlScheme: "NAME");
+        url: urlDireccion, callbackUrlScheme: "cbname");
     final error = Uri.parse(response).queryParameters['error'];
     if (error == null) {
       final code = Uri.parse(response).queryParameters['code'];
